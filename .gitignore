@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+.env
+
+# Data Science 
+data/*
+!data/README.md
+*.csv
+*.json
+*.h5
+*.pkl
+
+# Jupyter
+.ipynb_checkpoints
