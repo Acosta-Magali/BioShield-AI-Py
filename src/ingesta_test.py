@@ -9,9 +9,9 @@ def ejecutar_pipeline_ingesta():
     print("=== SISTEMA BIOSHIELD-AI: PIPELINE DE INTEGRACIÓN Y RIESGO ===")
 
     # 1. Definición de rutas
-    ruta_csv = "data/raw/mock_ambiental.csv"  # <--- Asegúrate de que apunte aquí
-    ruta_fasta = "data/raw/mock_biologico.fasta" # <--- Y aquí
-    
+    ruta_csv = "data/raw/mock_ambiental.csv"  
+    ruta_fasta = "data/raw/mock_biologico.fasta"
+
     # [PASO 1] Procesamiento de Datos Ambientales (Pandas)
     print("\n[PASO 1] Procesando Datos Ambientales...")
     df_raw = cargar_csv_ambiental(ruta_csv)
