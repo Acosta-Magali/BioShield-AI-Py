@@ -38,4 +38,4 @@ def ejecutar_stress_test(volumen=500):
         print("[OK] El sistema soportó la carga de datos masiva.")
 
 if __name__ == "__main__":
-    ejecutar_stress_test(500)
+    ejecutar_stress_test(1000)
