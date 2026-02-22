@@ -1,69 +1,83 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-import numpy as np
+import sys
+import os
 from datetime import datetime
 
+# Configuración de rutas para importar módulos internos
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
+from src.security.blockchain import BioShieldChain
+
+# Inicialización de la Blockchain en el estado de la sesión de Streamlit
+# Esto evita que la cadena se reinicie cada vez que movemos un slider
+if 'bioshield_chain' not in st.session_state:
+    st.session_state.bioshield_chain = BioShieldChain()
+
 def main():
-    st.set_page_config(page_title="BioShield-AI | Tactical Dashboard", layout="wide")
+    st.set_page_config(page_title="BioShield-AI Control", layout="wide")
     
-    # --- HEADER ---
-    st.title("🛡️ BioShield-AI: Centro de Control de Bioseguridad")
-    st.info("Monitoreo en tiempo real con respaldo de integridad en Blockchain.")
-
-    # --- DATOS SIMULADOS (Para visualización) ---
-    # Evolución temporal
-    time_index = pd.date_range(start=datetime.now(), periods=24, freq='H')
-    temp_data = np.random.normal(25, 2, size=24)
-    risk_score = np.cumsum(np.random.randn(24) * 0.1) + 1
+    st.title("🛡️ Sistema de Integración BioShield-AI")
     
-    df_temporal = pd.DataFrame({'Hora': time_index, 'Riesgo': risk_score, 'Temp': temp_data})
-
-    # Mapa de Calor (Coordenadas simuladas)
-    df_heat = pd.DataFrame({
-        'lat': np.random.uniform(-34.1, -34.2, 15),
-        'lon': np.random.uniform(-59.0, -59.1, 15),
-        'intensidad': np.random.uniform(0.1, 1.0, 15)
-    })
-
-    # --- VISTA PRINCIPAL (Layout) ---
+    # --- BARRA LATERAL: ENTRADA DE MODELOS IA ---
+    st.sidebar.header("🕹️ Simulación de Sensores (IA)")
+    sensor_id = st.sidebar.selectbox("Seleccionar Sensor", ["SN-001", "SN-002", "SN-003"])
+    riesgo_input = st.sidebar.select_slider("Nivel de Riesgo Detectado", options=["BAJO", "MODERADO", "ALTO", "CRÍTICO"])
+    temp = st.sidebar.number_input("Temperatura Ambiente (°C)", value=25.0)
     
-    # Fila 1: Métricas Críticas
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Índice de Riesgo", f"{risk_score[-1]:.2f}", "+5%")
-    m2.metric("Sensores Activos", "12/12", "100%")
-    m3.metric("Último Hash", "9a6ca41...", delta="Válido", delta_color="normal")
-    m4.metric("Alertas 24h", "3", "-1", delta_color="inverse")
+    if st.sidebar.button("Registrar Evento en Blockchain"):
+        nuevo_evento = {
+            "sensor_id": sensor_id,
+            "riesgo": riesgo_input,
+            "temp": temp,
+            "timestamp": datetime.now().strftime("%H:%M:%S")
+        }
+        st.session_state.bioshield_chain.add_block(nuevo_evento)
+        st.sidebar.success("Evento anclado a la red.")
 
+    # --- COLUMNAS DE VISUALIZACIÓN ---
+    col1, col2 = st.columns([1, 1])
+
+    with col1:
+        st.subheader("📊 Historial de Riesgo (Modelos)")
+        # Extraemos datos de la Blockchain para el gráfico
+        chain_data = []
+        for block in st.session_state.bioshield_chain.chain:
+            if isinstance(block.data, dict):
+                chain_data.append(block.data)
+        
+        if chain_data:
+            df = pd.DataFrame(chain_data)
+            fig = px.line(df, x="timestamp", y="temp", color="sensor_id", 
+                         title="Evolución de Temperatura por Sensor", markers=True)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No hay datos suficientes para graficar.")
+
+    with col2:
+        st.subheader("🛡️ Verificador de Integridad")
+        es_valida = st.session_state.bioshield_chain.auditar_cadena()
+        if es_valida:
+            st.success("CADENA ÍNTEGRA: Los datos coinciden con el registro SHA-256.")
+        else:
+            st.error("ALERTA: Se ha detectado una discrepancia en la base de datos.")
+
+    # --- TABLA DE LA BASE DE DATOS BLOCKCHAIN ---
     st.markdown("---")
-
-    # Fila 2: Gráficas Principales
-    col_izq, col_der = st.columns([2, 1])
-
-    with col_izq:
-        st.subheader("📈 Evolución Temporal del Riesgo")
-        fig_evol = px.area(df_temporal, x='Hora', y='Riesgo', 
-                          color_discrete_sequence=['#ff4b4b'])
-        fig_evol.update_layout(margin=dict(l=0, r=0, t=30, b=0), height=350)
-        st.plotly_chart(fig_evol, use_container_width=True)
-
-    with col_der:
-        st.subheader("📍 Mapa de Calor de Amenazas")
-        # Usamos un gráfico de dispersión sobre mapa (puedes usar st.map para algo simple)
-        st.map(df_heat) 
-
-    st.markdown("---")
-
-    # Fila 3: Panel de Alertas y Blockchain
-    st.subheader("🚨 Panel de Alertas Recientes")
+    st.subheader("🔗 Libro Mayor de Eventos (Trazabilidad)")
     
-    alertas_data = [
-        {"Hora": "21:45", "Evento": "Detección SN-001", "Riesgo": "ALTO", "Estado": "🛡️ En Blockchain"},
-        {"Hora": "20:30", "Evento": "Variación Térmica", "Riesgo": "BAJO", "Estado": "🛡️ En Blockchain"},
-        {"Hora": "18:15", "Evento": "Falla de Comunicación", "Riesgo": "MODERADO", "Estado": "🛡️ En Blockchain"},
-    ]
-    st.table(pd.DataFrame(alertas_data))
+    # Transformamos la cadena en un DataFrame para mostrarlo bonito
+    display_data = []
+    for b in st.session_state.bioshield_chain.chain:
+        display_data.append({
+            "Bloque": b.index,
+            "Hash": b.hash[:15] + "...",
+            "Datos": str(b.data),
+            "Previo": b.previous_hash[:15] + "..."
+        })
+    
+    st.dataframe(pd.DataFrame(display_data), use_container_width=True)
 
 if __name__ == "__main__":
     main()
