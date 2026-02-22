@@ -1,61 +1,69 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import sys
-import os
-
-# Añadir el directorio raíz al path para poder importar nuestros módulos
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-
-from src.security.blockchain import BioShieldChain
+import plotly.graph_objects as go
+import numpy as np
+from datetime import datetime
 
 def main():
-    # 1. Configuración de la página
-    st.set_page_config(
-        page_title="BioShield-AI Dashboard",
-        page_icon="🛡️",
-        layout="wide"
-    )
-
-    # 2. Barra Lateral (Controles)
-    st.sidebar.title("🛡️ BioShield-AI")
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("Parámetros Globales")
-    temp = st.sidebar.slider("Temperatura (°C)", 0, 50, 25)
-    viento = st.sidebar.slider("Velocidad del Viento (m/s)", 0.0, 20.0, 5.0)
-
-    # 3. Título Principal
-    st.title("Sistema de Monitoreo de Bioseguridad")
-    st.markdown("""
-    Este panel integra inteligencia artificial para predicción de riesgo y 
-    blockchain para la integridad de los datos.
-    """)
-
-    # 4. Layout de Columnas para Métricas
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Estado del Sistema", "Activo", delta="OK")
-    with col2:
-        st.metric("Nivel de Riesgo", "Bajo", delta="-2%", delta_color="inverse")
-    with col3:
-        st.metric("Integridad Blockchain", "Verificada", delta="100%")
-
-    # 5. Espacio para el gráfico de Dispersión (Plotly)
-    st.subheader("Simulación de Dispersión en Tiempo Real")
+    st.set_page_config(page_title="BioShield-AI | Tactical Dashboard", layout="wide")
     
-    # Datos de ejemplo para inicializar el gráfico
-    df_sim = pd.DataFrame({
-        'Distancia (m)': range(100),
-        'Concentración': [x**2 * 0.001 for x in range(100)]
-    })
-    fig = px.line(df_sim, x='Distancia (m)', y='Concentración', 
-                  title="Curva de Dispersión Atmosférica")
-    st.plotly_chart(fig, use_container_width=True)
+    # --- HEADER ---
+    st.title("🛡️ BioShield-AI: Centro de Control de Bioseguridad")
+    st.info("Monitoreo en tiempo real con respaldo de integridad en Blockchain.")
 
-    # 6. Sección de Blockchain
-    st.subheader("Registro Inmutable (Blockchain)")
-    if st.button("Verificar Historial de Auditoría"):
-        st.success("Cadena de bloques verificada: No se detectaron alteraciones.")
+    # --- DATOS SIMULADOS (Para visualización) ---
+    # Evolución temporal
+    time_index = pd.date_range(start=datetime.now(), periods=24, freq='H')
+    temp_data = np.random.normal(25, 2, size=24)
+    risk_score = np.cumsum(np.random.randn(24) * 0.1) + 1
+    
+    df_temporal = pd.DataFrame({'Hora': time_index, 'Riesgo': risk_score, 'Temp': temp_data})
+
+    # Mapa de Calor (Coordenadas simuladas)
+    df_heat = pd.DataFrame({
+        'lat': np.random.uniform(-34.1, -34.2, 15),
+        'lon': np.random.uniform(-59.0, -59.1, 15),
+        'intensidad': np.random.uniform(0.1, 1.0, 15)
+    })
+
+    # --- VISTA PRINCIPAL (Layout) ---
+    
+    # Fila 1: Métricas Críticas
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Índice de Riesgo", f"{risk_score[-1]:.2f}", "+5%")
+    m2.metric("Sensores Activos", "12/12", "100%")
+    m3.metric("Último Hash", "9a6ca41...", delta="Válido", delta_color="normal")
+    m4.metric("Alertas 24h", "3", "-1", delta_color="inverse")
+
+    st.markdown("---")
+
+    # Fila 2: Gráficas Principales
+    col_izq, col_der = st.columns([2, 1])
+
+    with col_izq:
+        st.subheader("📈 Evolución Temporal del Riesgo")
+        fig_evol = px.area(df_temporal, x='Hora', y='Riesgo', 
+                          color_discrete_sequence=['#ff4b4b'])
+        fig_evol.update_layout(margin=dict(l=0, r=0, t=30, b=0), height=350)
+        st.plotly_chart(fig_evol, use_container_width=True)
+
+    with col_der:
+        st.subheader("📍 Mapa de Calor de Amenazas")
+        # Usamos un gráfico de dispersión sobre mapa (puedes usar st.map para algo simple)
+        st.map(df_heat) 
+
+    st.markdown("---")
+
+    # Fila 3: Panel de Alertas y Blockchain
+    st.subheader("🚨 Panel de Alertas Recientes")
+    
+    alertas_data = [
+        {"Hora": "21:45", "Evento": "Detección SN-001", "Riesgo": "ALTO", "Estado": "🛡️ En Blockchain"},
+        {"Hora": "20:30", "Evento": "Variación Térmica", "Riesgo": "BAJO", "Estado": "🛡️ En Blockchain"},
+        {"Hora": "18:15", "Evento": "Falla de Comunicación", "Riesgo": "MODERADO", "Estado": "🛡️ En Blockchain"},
+    ]
+    st.table(pd.DataFrame(alertas_data))
 
 if __name__ == "__main__":
     main()
