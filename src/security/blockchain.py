@@ -4,110 +4,81 @@ import json
 
 class Block:
     def __init__(self, index, data, previous_hash):
-        """
-        Representa un bloque individual en la cadena.
-        """
         self.index = index
         self.timestamp = time.time()
-        self.data = data  # Puede ser un string o un diccionario
+        self.data = data
         self.previous_hash = previous_hash
         self.hash = self.calculate_hash()
 
     def calculate_hash(self):
-        """
-        Crea un hash SHA-256 del contenido del bloque.
-        """
-        # Convertimos el diccionario de datos a string JSON ordenado para evitar inconsistencias
+        # Convertimos a JSON ordenado para que el hash sea siempre igual ante los mismos datos
         data_string = json.dumps(self.data, sort_keys=True)
         block_content = f"{self.index}{self.timestamp}{data_string}{self.previous_hash}"
-        
         return hashlib.sha256(block_content.encode()).hexdigest()
 
 class BioShieldChain:
     def __init__(self):
-        """
-        Inicializa la cadena con el bloque génesis.
-        """
         self.chain = [self.create_genesis_block()]
 
     def create_genesis_block(self):
-        return Block(0, "Bloque Génesis - Sistema BioShield-AI Iniciado", "0")
+        return Block(0, "SYSTEM_START: Inicio de registros BioShield-AI", "0")
 
     def get_latest_block(self):
         return self.chain[-1]
 
     def add_block(self, data):
-        """
-        Crea y añade un nuevo bloque a la cadena.
-        """
         new_block = Block(
             index=len(self.chain),
             data=data,
             previous_hash=self.get_latest_block().hash
         )
         self.chain.append(new_block)
+        print(f"📦 Bloque #{new_block.index} añadido con éxito.")
 
-    def is_chain_valid(self):
-        """
-        Recorre la cadena verificando la integridad criptográfica de cada bloque.
-        """
+    def auditar_cadena(self):
+        """Verifica la integridad criptográfica total."""
         for i in range(1, len(self.chain)):
             current = self.chain[i]
             previous = self.chain[i-1]
 
-            # Verificar si el hash del bloque actual es correcto
+            # Prueba 1: ¿Los datos coinciden con el hash?
             if current.hash != current.calculate_hash():
-                print(f"❌ ERROR: El contenido del Bloque #{i} ha sido manipulado.")
+                print(f"🛑 ALERTA: Datos alterados en Bloque #{i}")
                 return False
 
-            # Verificar si el bloque apunta al hash correcto del anterior
+            # Prueba 2: ¿El enlace con el bloque anterior es correcto?
             if current.previous_hash != previous.hash:
-                print(f"❌ ERROR: El Bloque #{i} tiene un enlace roto con el anterior.")
+                print(f"🛑 ALERTA: Enlace roto en Bloque #{i}")
                 return False
-                
+
+        print("🔍 Auditoría completada: No se detectaron anomalías.")
         return True
 
-# --- SECCIÓN DE PRUEBAS Y AUDITORÍA ---
+# --- PRUEBA DE AUDITORÍA ---
 if __name__ == "__main__":
     print("=== SISTEMA DE SEGURIDAD BLOCKCHAIN BIOSHIELD-AI ===")
     
-    # 1. Instanciar la cadena
-    bioshield_chain = BioShieldChain()
-
-    # 2. Registrar datos simulados de sensores e IA
-    print("\n[INFO] Registrando eventos en el libro mayor inmutable...")
-    bioshield_chain.add_block({
-        "sensor_id": "SN-001",
-        "tipo": "Detección ADN",
-        "resultado": "Positivo",
-        "riesgo": "ALTO"
-    })
+    # 1. Creamos la base de datos
+    bioshield_db = BioShieldChain()
     
-    bioshield_chain.add_block({
-        "sensor_id": "SN-002",
-        "tipo": "Simulación Fluido",
-        "viento": "5.5 m/s",
-        "estado": "Dispersión Activa"
-    })
+    # 2. Registramos datos legítimos
+    bioshield_db.add_block({"alerta": "BAJA", "virus": "None"})
+    bioshield_db.add_block({"alerta": "CRÍTICA", "virus": "SARS-CoV-2-Delta"})
 
-    # 3. Mostrar estado actual
-    for b in bioshield_chain.chain:
-        print(f"\nBloque #{b.index} | Hash: {b.hash[:20]}...")
-        print(f"Datos: {b.data}")
+    # 3. Primera Auditoría (Debe salir OK)
+    print("\n--- Iniciando Auditoría de Rutina ---")
+    bioshield_db.auditar_cadena()
 
-    # 4. Prueba de Integridad (SANA)
-    print(f"\n🔍 Verificando integridad inicial: {'✅ VÁLIDA' if bioshield_chain.is_chain_valid() else '❌ CORRUPTA'}")
+    # 4. SIMULACIÓN DE ATAQUE
+    print("\n--- [SIMULACIÓN DE ATAQUE] Alterando datos del Bloque 1 ---")
+    # Cambiamos los datos manualmente sin recalcular el hash
+    bioshield_db.chain[1].data = {"alerta": "BAJA", "virus": "None (Falsificado)"}
+    print(f"Datos manipulados: {bioshield_db.chain[1].data}")
 
-    # 5. SIMULACIÓN DE ATAQUE (Hackeo de datos)
-    print("\n" + "!"*40)
-    print("⚠️ SIMULANDO INTENTO DE MANIPULACIÓN ⚠️")
-    print("Modificando el riesgo del Bloque #1 de 'ALTO' a 'BAJO'...")
+    # 5. Segunda Auditoría (Debe detectar el error)
+    print("\n--- Re-iniciando Auditoría Post-Incidente ---")
+    if not bioshield_db.auditar_cadena():
+        print("🚨 RESULTADO: Integridad comprometida. Bloqueando acceso a datos.")
+    else:
+        print("✅ Resultado: Cadena íntegra.")
     
-    # El atacante intenta cambiar los datos del sensor
-    bioshield_chain.chain[1].data["riesgo"] = "BAJO" 
-    
-    print(f"Datos actuales en Bloque #1: {bioshield_chain.chain[1].data}")
-    print("!"*40)
-
-    # 6. Verificación Final tras el ataque
-    print(f"\n🔍 Verificando integridad tras el ataque: {'✅ VÁLIDA' if bioshield_chain.is_chain_valid() else '❌ CORRUPTA - ALERTA DE SEGURIDAD'}")
